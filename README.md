@@ -1,15 +1,13 @@
-# Sam – A Starter Application Using Mundy
+# HP1Mundy – Interphase chromatin using MuNDy
 
 ## Welcome and Purpose
 
-Sam is a mock **C++** application built on the *Mundy* framework, which we use as the template for all of our formal Mundy applications. If all you desire is to use Mundy within your library, simply use `find_package(Mundy)` and `target_link_libraries(some_exe Private Mundy::all_libs)`. But if you desire to build a formal application that depends on Mundy, this template helps streamline that process. We assume basic C++ knowledge (e.g. you've taken an introductory course) and introductory level **CMake** knowledge, with most things CMake-related handled for you or explained in full detail.
-
-The purpose of "Sam" is to provide a standardized, working setup for our various applications. It includes a straightforward `main` program, a testing setup, and the necessary CMake configuration to work with the Mundy framework. By exploring this template, you'll learn how to structure a CMake-based project, manage source files, write unit tests, and build/install everything in a way that meets formal standards.
+TBA
 
 ---
 ## Quick Start
 
-To build and run Sam:
+To build and run HP1Mundy:
 ```bash
 mkdir build && cd build
 cmake .. -DMundy_DIR=~/local/ -DCMAKE_INSTALL_PREFIX=~/local/
@@ -17,32 +15,19 @@ make -j12
 ```
 
 This produces two executables:
-- `Sam.X` – your main program
-- `Sam_unit_tests.X` – your GoogleTest-based test suite
+- `HP1Mundy.X` – your main program
+- `HP1Mundy_unit_tests.X` – your GoogleTest-based test suite
 
 Run them directly from the `build/` directory:
 ```bash
-./Sam.X
-./Sam_unit_tests.X
+./HP1Mundy.X
+./HP1Mundy_unit_tests.X
 ```
 
-To install the Sam library after building:
+To install the HP1Mundy application after building:
 ```bash
 make install
 ```
-
----
-## Customize the Template
-
-Follow these steps to customize the template for your own project:
-
-1. **Set your project name** – Open the `ProjectName.cmake` file and change the project name from "Sam" to your desired name. Use PascalCase for consistency (e.g., MyProject).
-2. **Update file headers** – Update file headers and license mentions to reflect your project name and author.
-3. **Review the license** – (Optional) By default, this template (and Mundy itself) is licensed under **GNU GPLv3**, which is a *copyleft* license. If you have a preferred non-GPLv3 copyleft license, feel free to swap to it instead. For details, see the **License Guidance** section.
-
-## License Guidance
-
-**Why GPLv3?** Mundy is released under the GNU General Public License v3.0, a strong *copyleft* license that ensures distributed versions of your software remain open, collaborative, and not quietly re-sold by others. Any project that links against GPLv3 libraries must use a GPLv3-compatible license (such as the Apache Software License, version 2.0). Importantly, MIT and BDS are not-compatible. If you’re unsure about licenses, keep the default — it’s compliant and beginner-safe.
 
 ---
 ## Source Structure and Main Function
