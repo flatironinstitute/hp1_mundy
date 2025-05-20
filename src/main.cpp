@@ -27,6 +27,7 @@
 #include <stk_balance/balance.hpp>  // for stk::balance::balanceStkMesh
 #include <stk_io/StkMeshIoBroker.hpp>
 #include <stk_io/WriteMesh.hpp>
+#include <stk_mesh/base/DumpMeshInfo.hpp>  // for stk::mesh::impl::dump_all_mesh_info
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/GetNgpField.hpp>
 #include <stk_mesh/base/GetNgpMesh.hpp>
@@ -55,7 +56,19 @@
 
 namespace mundy {
 
+// Structures for template accessors and aggregates
+struct COORDS {};
+struct FORCE {};
+struct RNG_COUNTER {};
+struct RADIUS {};
+struct CHAINID {};
+struct LINKED_ENTITIES {};
+
 void run_main(int argc, char** argv) {
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <num_time_steps>" << std::endl;
+    return;
+  }
   // STK usings
   using stk::mesh::Field;
   using stk::mesh::Part;
@@ -94,7 +107,7 @@ void run_main(int argc, char** argv) {
 
   // Declare parts
   //   Sphere parts: PARTICLE_TOPOLOGY
-  Part& chromatin_sphere_part = meta_data.declare_part("CHROMATIN_SPHERE_PART", NODE_RANK);
+  Part& chromatin_sphere_part = meta_data.declare_part_with_topology("CHROMATIN_SPHERE_PART", stk::topology::PARTICLE);
   Part& slink_part = link_meta_data.declare_link_part("SURFACE_LINKS", 2 /* our dimensionality */);
 
   // Declare all fields
@@ -148,13 +161,65 @@ void run_main(int argc, char** argv) {
   // Commit the meta data
   meta_data.commit();
 
-  // Create our accessors and aggregates
+  // Build our accessors and aggregates
+  // Create accessors
   auto node_coord_accessor = Vector3FieldComponent(node_coords_field);
   auto node_force_accessor = Vector3FieldComponent(node_force_field);
   auto node_rng_counter_accessor = ScalarFieldComponent(node_rng_counter_field);
   auto elem_radius_accessor = ScalarFieldComponent(elem_radius_field);
   auto elem_chainid_accessor = ScalarFieldComponent(elem_chainid_field);
   auto elem_rng_counter_accessor = ScalarFieldComponent(elem_rng_counter_field);
+
+  auto linked_entities_accessor = FieldComponent(link_meta_data.linked_entities_field());
+  // Create aggregates
+  auto chromatin_sphere_agg = make_aggregate<stk::topology::PARTICLE>(bulk_data, chromatin_sphere_part)
+                                  .add_component<COORDS, NODE_RANK>(node_coord_accessor)
+                                  .add_component<FORCE, NODE_RANK>(node_force_accessor)
+                                  .add_component<RNG_COUNTER, NODE_RANK>(node_rng_counter_accessor)
+                                  .add_component<RADIUS, ELEM_RANK>(elem_radius_accessor)
+                                  .add_component<CHAINID, ELEM_RANK>(elem_chainid_accessor)
+                                  .add_component<RNG_COUNTER, ELEM_RANK>(elem_rng_counter_accessor);
+  auto slink_agg = make_ranked_aggregate<NODE_RANK>(bulk_data, slink_part)
+                       .add_component<LINKED_ENTITIES, NODE_RANK>(linked_entities_accessor);
+
+  // Load simulation parameters (XXX)
+
+  // Create entities
+  DeclareEntitiesHelper dec_helper;
+  unsigned current_node_entity_id = 1;
+  unsigned current_elem_entity_id = 1;
+  // Create the chromatin spheres at both the node and element level together
+  for (unsigned i = 1; i <= 5; ++i) {
+    // Create the NODE entity
+    dec_helper.create_node()
+        .owning_proc(0)
+        .id(current_node_entity_id)
+        .add_field_data<double>(&node_coords_field, {0.0, 0.0, 0.0})
+        .add_field_data<double>(&node_force_field, {0.0, 0.0, 0.0})
+        .add_field_data<unsigned>(&node_rng_counter_field, {0});
+    // Create the ELEM entity
+    dec_helper.create_element()
+        .owning_proc(0)
+        .id(current_elem_entity_id)
+        .topology(stk::topology::PARTICLE)
+        .add_part(&chromatin_sphere_part)
+        .nodes({current_node_entity_id})
+        .add_field_data<unsigned>(&elem_chainid_field, {1})
+        .add_field_data<double>(&elem_radius_field, {0.5})
+        .add_field_data<unsigned>(&elem_rng_counter_field, {0});
+    // Increment counters at the end of the loop
+    current_node_entity_id++;
+    current_elem_entity_id++;
+  }
+
+  // Declare the entities
+  dec_helper.check_consistency(bulk_data);
+  bulk_data.modification_begin();
+  dec_helper.declare_entities(bulk_data);
+  bulk_data.modification_end();
+
+  // XXX Dump all of the mesh info
+  stk::mesh::impl::dump_all_mesh_info(bulk_data, std::cout);
 }
 
 }  // namespace mundy
